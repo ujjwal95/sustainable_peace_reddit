@@ -1,10 +1,15 @@
 import nltk
 import re
 from bs4 import BeautifulSoup
+import pandas as pd
+
 
 class reddit_text_preprocessing:
     def __init__(self,text):
         self.__text = text
+        abb = pd.read_csv('abbreviatons.csv')
+        abb = abb.set_index('abbreviation')['long_form'].T.to_dict()
+        self.__abbreviations = abb
     
     @property
     def text(self):
@@ -76,6 +81,22 @@ class reddit_text_preprocessing:
         # mostly stemmers are stemmer = nltk.stem.PorterStemmer()
         if stemmer:
             text = ' '.join([stemmer.stem(word) for word in text.split()])
+        self.__text = text
+        return self
+    
+    def replace_abbreviations(self):
+        text = self.__text
+        abbreviations = self.__abbreviations
+        
+        substrs = sorted(abbreviations, key=len, reverse=True)
+        text = ' '.join([ word.strip().upper() for word in text.split()])
+
+        # Create a big OR regex that matches any of the substrings to replace
+        regexp = re.compile('|'.join(map(re.escape, substrs)))
+
+        # For each match, look up the new string in the replacements
+        text = regexp.sub(lambda match: abbreviations[match.group(0)], text)
+        
         self.__text = text
         return self
         
